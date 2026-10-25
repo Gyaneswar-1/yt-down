@@ -1,0 +1,12 @@
+.venv/
+venv/
+downloads/
+archives/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+.env
+.DS_Store

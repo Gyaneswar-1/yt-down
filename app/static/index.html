@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Pro Downloader | yt-dlp Studio</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-group">
+        <div class="logo-icon">
+          <i data-lucide="play"></i>
+        </div>
+        <div class="app-title">
+          <h1>YouTube Studio Downloader</h1>
+          <p>Powered by yt-dlp & FFmpeg • All Resolutions • Playlist Pause & Resume</p>
+        </div>
+      </div>
+      <div class="status-badge" id="backend-status">
+        <span class="status-dot"></span>
+        <span id="status-text">Engine Ready</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+      <button class="tab-btn active" onclick="switchTab('single')">
+        <i data-lucide="film"></i> Video Downloader
+      </button>
+      <button class="tab-btn" onclick="switchTab('playlist')">
+        <i data-lucide="layers"></i> Playlist Batch Manager
+        <span class="tab-badge">Pause/Resume</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('queue')">
+        <i data-lucide="cpu"></i> Active Tasks
+        <span class="tab-badge" id="active-tasks-count">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('files')">
+        <i data-lucide="hard-drive"></i> Media Library
+        <span class="tab-badge" id="files-count">0</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: SINGLE VIDEO (AUTO-INSPECT & SHARP CARDS) -->
+    <section id="tab-single" class="tab-content">
+      <div class="card">
+        <h2 class="card-title"><i data-lucide="link-2"></i> Paste Video URL (Automatic Stream Inspection)</h2>
+        
+        <!-- Auto-Inspect Input -->
+        <div class="input-wrapper">
+          <span class="input-icon-left"><i data-lucide="youtube"></i></span>
+          <input 
+            type="text" 
+            id="video-url" 
+            class="text-input-auto" 
+            placeholder="Paste YouTube link (e.g. https://www.youtube.com/watch?v=...) — auto-inspects instantly!" 
+            autocomplete="off"
+            oninput="handleVideoInput(this.value)"
+            onpaste="handleVideoPaste(event)"
+          />
+          <span id="video-spinner" class="input-spinner">
+            <i data-lucide="loader-2"></i>
+          </span>
+        </div>
+
+        <div id="video-auto-status" class="auto-status-bar">
+          <i data-lucide="info"></i>
+          <span>Paste any YouTube link above. The engine will automatically detect available resolutions.</span>
+        </div>
+
+        <!-- Video Metadata Preview -->
+        <div id="video-preview-card" style="display: none;" class="media-preview-sharp">
+          <img id="video-thumb" class="media-thumb-sharp" src="" alt="Thumbnail" />
+          <div class="media-info">
+            <div>
+              <h3 id="video-title" class="media-title-sharp"></h3>
+              <div class="media-meta-sharp">
+                <span id="video-channel"><i data-lucide="user"></i> Channel</span>
+                <span id="video-duration"><i data-lucide="clock"></i> 00:00</span>
+                <span id="video-views"><i data-lucide="eye"></i> 0 views</span>
+              </div>
+            </div>
+            <div id="detected-tag-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+          </div>
+        </div>
+
+        <!-- REVEALED OPTIONS AFTER AUTO-INSPECT -->
+        <div id="video-options-panel" style="display: none;">
+          
+          <!-- Mode Segmented Control -->
+          <div class="section-subtitle"><i data-lucide="sliders"></i> Output Mode</div>
+          <div class="segmented-control">
+            <button id="mode-btn-video" class="seg-btn active" onclick="setMediaMode('video')">
+              <i data-lucide="video"></i> Video + Best Audio
+            </button>
+            <button id="mode-btn-audio" class="seg-btn" onclick="setMediaMode('audio')">
+              <i data-lucide="music"></i> Audio Only (MP3 Extraction)
+            </button>
+          </div>
+
+          <!-- Video Resolutions (Sharp Pill Selector) -->
+          <div id="video-resolution-section">
+            <div class="section-subtitle"><i data-lucide="monitor"></i> Choose Target Resolution</div>
+            <div class="pills-grid" id="resolution-pills-container">
+              <!-- Dynamically populated or default pills -->
+            </div>
+
+            <!-- Container Format Segmented Control -->
+            <div class="section-subtitle" style="margin-top: 1rem;"><i data-lucide="box"></i> Container Format</div>
+            <div class="segmented-control" style="max-width: 450px;">
+              <button class="seg-btn active container-btn" data-container="mp4" onclick="setContainer('mp4')">MP4 (Standard)</button>
+              <button class="seg-btn container-btn" data-container="mkv" onclick="setContainer('mkv')">MKV (Lossless)</button>
+              <button class="seg-btn container-btn" data-container="webm" onclick="setContainer('webm')">WebM</button>
+            </div>
+          </div>
+
+          <!-- Audio Settings Section (If in Audio Mode) -->
+          <div id="audio-settings-section" style="display: none;">
+            <div class="section-subtitle"><i data-lucide="headphones"></i> Audio Quality & Codec</div>
+            <div class="pills-grid">
+              <div class="pill-card active audio-pill" data-audio="mp3:320" onclick="selectAudioPill(this)">
+                <div class="pill-res">MP3 <span class="pill-badge">320 KBPS</span></div>
+                <div class="pill-desc">Maximum Quality Audiophile</div>
+              </div>
+              <div class="pill-card audio-pill" data-audio="mp3:256" onclick="selectAudioPill(this)">
+                <div class="pill-res">MP3 <span class="pill-badge">256 KBPS</span></div>
+                <div class="pill-desc">High Bitrate</div>
+              </div>
+              <div class="pill-card audio-pill" data-audio="mp3:192" onclick="selectAudioPill(this)">
+                <div class="pill-res">MP3 <span class="pill-badge">192 KBPS</span></div>
+                <div class="pill-desc">Standard Bitrate</div>
+              </div>
+              <div class="pill-card audio-pill" data-audio="flac:0" onclick="selectAudioPill(this)">
+                <div class="pill-res">FLAC <span class="pill-badge">LOSSLESS</span></div>
+                <div class="pill-desc">Original Studio Fidelity</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <div style="display: flex; gap: 2rem; margin: 1.5rem 0; flex-wrap: wrap;">
+            <label class="checkbox-sharp">
+              <input type="checkbox" id="embed-subs" />
+              <span>Embed Subtitles (English)</span>
+            </label>
+            <label class="checkbox-sharp">
+              <input type="checkbox" id="embed-thumb" checked />
+              <span>Embed Cover Art & Metadata</span>
+            </label>
+          </div>
+
+          <!-- Prominent Download Button (Revealed after Auto-Inspect) -->
+          <div class="download-action-box">
+            <button class="btn-sharp btn-yt-sharp" style="width: 100%; font-size: 1.05rem;" onclick="executeSingleDownload()">
+              <i data-lucide="download"></i> Download Video Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: PLAYLIST BATCH MANAGER (AUTO-INSPECT + SHARP CONTROLS) -->
+    <section id="tab-playlist" class="tab-content" style="display: none;">
+      <div class="card">
+        <h2 class="card-title"><i data-lucide="list-video"></i> Playlist Batch Manager (Pause & Resume)</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.9rem;">
+          Download playlists with state preservation. You can pause at 10 videos (or any number) and resume downloading the rest later without re-downloading!
+        </p>
+
+        <!-- Playlist Auto-Inspect Input -->
+        <div class="input-wrapper">
+          <span class="input-icon-left"><i data-lucide="list-music"></i></span>
+          <input 
+            type="text" 
+            id="playlist-url" 
+            class="text-input-auto" 
+            placeholder="Paste YouTube Playlist link (e.g. https://www.youtube.com/playlist?list=...) — auto-inspects!" 
+            autocomplete="off"
+            oninput="handlePlaylistInput(this.value)"
+            onpaste="handlePlaylistPaste(event)"
+          />
+          <span id="playlist-spinner" class="input-spinner">
+            <i data-lucide="loader-2"></i>
+          </span>
+        </div>
+
+        <div id="playlist-auto-status" class="auto-status-bar">
+          <i data-lucide="info"></i>
+          <span>Paste a playlist link to automatically inspect entries and completed archives.</span>
+        </div>
+
+        <!-- Playlist Summary Card -->
+        <div id="playlist-preview-card" style="display: none;" class="media-preview-sharp">
+          <div class="media-info">
+            <h3 id="playlist-title" class="media-title-sharp"></h3>
+            <div class="media-meta-sharp">
+              <span id="playlist-channel"><i data-lucide="user"></i> Channel</span>
+              <span id="playlist-total-count"><i data-lucide="video"></i> 0 Total Videos</span>
+              <span id="playlist-downloaded-count" style="color: #34d399;"><i data-lucide="check-circle"></i> 0 Completed in Archive</span>
+              <span id="playlist-remaining-count" style="color: #fbbf24;"><i data-lucide="clock"></i> 0 Remaining</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- REVEALED PLAYLIST CONTROLS -->
+        <div id="playlist-options-panel" style="display: none;">
+          <!-- Batch Pause Control (Sharp Segmented Buttons) -->
+          <div class="section-subtitle"><i data-lucide="pause-circle"></i> Batch Limit (Pause Condition)</div>
+          <div class="segmented-control" id="batch-limit-selector">
+            <button class="seg-btn active batch-btn" data-batch="10" onclick="setBatchLimit('10')">
+              <i data-lucide="pause"></i> 10 Videos & Pause (Recommended)
+            </button>
+            <button class="seg-btn batch-btn" data-batch="5" onclick="setBatchLimit('5')">5 Videos</button>
+            <button class="seg-btn batch-btn" data-batch="20" onclick="setBatchLimit('20')">20 Videos</button>
+            <button class="seg-btn batch-btn" data-batch="0" onclick="setBatchLimit('0')">All Remaining</button>
+          </div>
+
+          <!-- Quality Selector Pills for Playlists -->
+          <div class="section-subtitle"><i data-lucide="sliders"></i> Target Quality</div>
+          <div class="pills-grid">
+            <div class="pill-card active playlist-res-pill" data-res="1080p" onclick="selectPlaylistRes(this)">
+              <div class="pill-res">1080p <span class="pill-badge">FHD</span></div>
+              <div class="pill-desc">Full High Definition</div>
+            </div>
+            <div class="pill-card playlist-res-pill" data-res="720p" onclick="selectPlaylistRes(this)">
+              <div class="pill-res">720p <span class="pill-badge">HD</span></div>
+              <div class="pill-desc">High Definition</div>
+            </div>
+            <div class="pill-card playlist-res-pill" data-res="2160p" onclick="selectPlaylistRes(this)">
+              <div class="pill-res">4K <span class="pill-badge">2160p</span></div>
+              <div class="pill-desc">Ultra High Definition</div>
+            </div>
+            <div class="pill-card playlist-res-pill" data-res="audio" onclick="selectPlaylistRes(this)">
+              <div class="pill-res">MP3 <span class="pill-badge">320K</span></div>
+              <div class="pill-desc">Audio Only (All Tracks)</div>
+            </div>
+          </div>
+
+          <!-- Range Inputs (Optional) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <label class="section-subtitle">Start Video Index (Optional)</label>
+              <input type="number" id="playlist-start-idx" class="text-input-auto" placeholder="e.g. 1" min="1" style="padding: 0.75rem 1rem;" />
+            </div>
+            <div>
+              <label class="section-subtitle">End Video Index (Optional)</label>
+              <input type="number" id="playlist-end-idx" class="text-input-auto" placeholder="e.g. 20" min="1" style="padding: 0.75rem 1rem;" />
+            </div>
+          </div>
+
+          <!-- Start / Resume Button -->
+          <div class="download-action-box">
+            <button class="btn-sharp btn-yt-sharp" style="width: 100%; font-size: 1.05rem;" onclick="executePlaylistDownload()">
+              <i data-lucide="play"></i> Start / Resume Playlist Batch
+            </button>
+          </div>
+
+          <!-- Playlist Items Table Preview -->
+          <div id="playlist-entries-section" style="margin-top: 2rem;">
+            <div class="section-subtitle"><i data-lucide="list"></i> Playlist Entries</div>
+            <div style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-sharp);">
+              <table class="table-sharp">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="playlist-entries-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ACTIVE TASKS & QUEUE -->
+    <section id="tab-queue" class="tab-content" style="display: none;">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 class="card-title" style="margin-bottom: 0;"><i data-lucide="cpu"></i> Active & Recent Tasks</h2>
+          <button class="btn-sharp btn-secondary-sharp btn-sm-sharp" onclick="fetchTasks()">
+            <i data-lucide="rotate-cw"></i> Refresh
+          </button>
+        </div>
+
+        <div id="tasks-container">
+          <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">
+            No active downloads. Paste a link above to begin!
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: MEDIA LIBRARY & PLAYER -->
+    <section id="tab-files" class="tab-content" style="display: none;">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 class="card-title" style="margin-bottom: 0;"><i data-lucide="folder-check"></i> Downloaded Media Files</h2>
+          <button class="btn-sharp btn-secondary-sharp btn-sm-sharp" onclick="loadFiles()">
+            <i data-lucide="rotate-cw"></i> Refresh Files
+          </button>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="table-sharp">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="files-table-body">
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                  Loading files...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- In-Browser Media Player Modal (Sharp Frame) -->
+  <div id="player-modal" class="modal-overlay">
+    <div class="modal-content-sharp">
+      <div class="modal-header">
+        <h3 id="modal-file-title" style="font-size: 1rem; font-weight: 700;">Media Player</h3>
+        <button class="modal-close" onclick="closePlayerModal()">&times;</button>
+      </div>
+      <div class="media-player-container" id="player-mount"></div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
